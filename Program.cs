@@ -1,9 +1,12 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
 using OAuthAuthorization.Domain.Models;
 using OAuthAuthorizationWebAPI.Persistence;
 using OpenIddict.Abstractions;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 var services = builder.Services;
@@ -19,6 +22,10 @@ IConfiguration configuration = new ConfigurationBuilder()
         .Build();
 
 services.AddSingleton(configuration);
+services.Configure<OAuthAuthorizationWebAPI.Helpers.Options.JwtBearerOptions>(configuration.GetSection("JwtBearerOptions"));
+var jwtOptions = configuration.GetSection("JwtBearerOptions").Get<OAuthAuthorizationWebAPI.Helpers.Options.JwtBearerOptions>();
+
+
 #endregion
 
 services.AddDbContext<ApplicationDbContext>(options =>
@@ -39,17 +46,18 @@ services.AddOpenIddict()
            })
            .AddServer(options =>
            {
-               options.SetAuthorizationEndpointUris("/api/authorize")
-                      .SetTokenEndpointUris("/api/token")
-                      .SetLogoutEndpointUris("/api/logout")
+               options.SetAuthorizationEndpointUris("/api/user/authorize")
+                      .SetTokenEndpointUris("/api/user/token")
+                      .SetLogoutEndpointUris("/api/user/logout")
                       ;
 
-               options.AllowClientCredentialsFlow()
+               options
                       .AllowPasswordFlow()
                       .AllowRefreshTokenFlow();
-                      //.AllowAuthorizationCodeFlow()
-                      //.AllowImplicitFlow()
-                      //.AllowHybridFlow()
+                       //.AllowClientCredentialsFlow()
+                       //.AllowAuthorizationCodeFlow()
+                       //.AllowImplicitFlow()
+                       //.AllowHybridFlow()
 
                options.AddDevelopmentEncryptionCertificate()
                       .AddDevelopmentSigningCertificate();
@@ -88,6 +96,38 @@ services.AddOpenIddict()
 
            })
            ;
+services.AddAuthentication(options =>
+ {
+     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+ })
+.AddJwtBearer(options =>
+{
+    options.Authority = jwtOptions.Authority;
+    options.ClaimsIssuer = jwtOptions.ClaimsIssuer;
+    options.Audience = jwtOptions.Audience;
+    options.RequireHttpsMetadata = jwtOptions.RequireHttpsMetadata;
+
+    options.TokenValidationParameters = jwtOptions.TokenValidationParameters;
+    options.TokenValidationParameters.ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 };
+    options.TokenValidationParameters.IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtOptions.TokenValidationParameters.IssuerSigningKeyString));
+})
+
+.AddCookie(options =>
+{
+    options.ExpireTimeSpan = TimeSpan.FromDays(1);
+})
+;
+
+services.AddCors(options =>
+{
+    options.AddDefaultPolicy(builder =>
+    {
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
 
 
 var app = builder.Build();

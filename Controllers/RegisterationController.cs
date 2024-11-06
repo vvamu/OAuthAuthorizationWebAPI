@@ -4,9 +4,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OAuthAuthorization.Domain.Models;
+using OAuthAuthorizationWebAPI.Helpers.ViewModel;
 using OAuthAuthorizationWebAPI.Persistence;
-using OAuthAuthorizationWebAPI.ViewModel;
 using OpenIddict.Abstractions;
+using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace OAuthAuthorizationWebAPI.Controllers;
 
@@ -15,27 +16,25 @@ namespace OAuthAuthorizationWebAPI.Controllers;
 public class RegisterationController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
-    private readonly ApplicationDbContext _applicationDbContext;
+    private readonly ApplicationDbContext _context;
     public RegisterationController(
           UserManager<ApplicationUser> userManager,
-          ApplicationDbContext applicationDbContext)
+          ApplicationDbContext context)
     {
         _userManager = userManager;
-        _applicationDbContext = applicationDbContext;
+        _context = context;
     }
 
-    //
-    // POST: /Account/Register
     [HttpPost]
     [Route("users/register")]
     public async Task<IActionResult> Register([FromBody] LoginViewModel model)
     {
         if (ModelState.IsValid)
         {
-            var user = await _applicationDbContext.Users.FirstOrDefaultAsync(x=>x.Login == model.Login.Trim());
+            var user = await _context.Users.FirstOrDefaultAsync(x=>x.Login == model.Login.Trim());
             if (user != null)
             {
-                return StatusCode(StatusCodes.Status409Conflict);
+                return StatusCode(StatusCodes.Status409Conflict, new { message = "User with this login already exists." });
             }
 
             user = new ApplicationUser { Login = model.Login.Trim(), UserName = model.Login.Trim() };
@@ -45,6 +44,7 @@ public class RegisterationController : ControllerBase
                 return Ok();
             }
             AddErrors(result);
+
         }
 
         return BadRequest(ModelState);

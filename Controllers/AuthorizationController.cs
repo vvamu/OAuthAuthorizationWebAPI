@@ -1,17 +1,21 @@
 ﻿using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using OAuthAuthorization.Domain.Models;
+using OAuthAuthorizationWebAPI.Helpers.ViewModel;
 using OAuthAuthorizationWebAPI.Persistence;
-using OAuthAuthorizationWebAPI.ViewModel;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Principal;
+using System.Text;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
 namespace OAuthAuthorizationWebAPI.Controllers;
@@ -27,15 +31,21 @@ public class AuthorizationController : ControllerBase
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly ApplicationDbContext _context;
+    private readonly Helpers.Options.JwtBearerOptions _jwtBearerOptions;
 
-    public AuthorizationController(IOpenIddictApplicationManager applicationManager, IOpenIddictAuthorizationManager authorizationManager, IOpenIddictScopeManager scopeManager, 
-        SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager)
+
+
+    public AuthorizationController(IOpenIddictApplicationManager applicationManager, IOpenIddictAuthorizationManager authorizationManager, IOpenIddictScopeManager scopeManager,
+        SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager, ApplicationDbContext context, IOptions<Helpers.Options.JwtBearerOptions> jwtBearerOptions)
     {
         _applicationManager = applicationManager;
         _authorizationManager = authorizationManager;
         _scopeManager = scopeManager;
         _signInManager = signInManager;
         _userManager = userManager;
+        _context = context;
+        _jwtBearerOptions = jwtBearerOptions.Value;
+        _jwtBearerOptions.TokenValidationParameters.IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_jwtBearerOptions.TokenValidationParameters.IssuerSigningKeyString));
     }
 
     #region Old
@@ -96,106 +106,71 @@ public class AuthorizationController : ControllerBase
 
     [HttpPost]
     [Route("users/token")]
-    public async Task<IActionResult> ConnectToken()
+    public async Task<IActionResult> Authenticate([FromBody] LoginViewModel model)
     {
-        try
+        var user = await _context.Users.FirstOrDefaultAsync(x => x.Login == model.Login.Trim());
+        if (user == null)
         {
-            var openIdConnectRequest = HttpContext.GetOpenIddictServerRequest() ??
-            throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
-
-            Identity = new ClaimsIdentity(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, Claims.Name, Claims.Role);
-            ApplicationUser? user = null;
-            AuthenticationProperties properties = new();
-
-            if (openIdConnectRequest.IsClientCredentialsGrantType())
+            return BadRequest(new OpenIddictResponse
             {
-                throw new NotImplementedException();
-            }
-            else if (openIdConnectRequest.IsPasswordGrantType())
-            {
-                user = await _context.Users.FirstOrDefaultAsync(x=>x.Login == openIdConnectRequest.Username);
-
-                if (user == null)
-                {
-                    return BadRequest(new OpenIddictResponse
-                    {
-                        Error = Errors.InvalidGrant,
-                        ErrorDescription = "User does not exist"
-                    });
-                }
-
-                var result = await _signInManager.PasswordSignInAsync(user.UserName, openIdConnectRequest.Password, false, lockoutOnFailure: false);
-                if (!result.Succeeded)
-                {
-                    return BadRequest(new OpenIddictResponse
-                    {
-                        Error = Errors.InvalidGrant,
-                        ErrorDescription = "Username or password is incorrect"
-                    });
-                    
-                }
-
-                //// Getting scopes from user parameters (TokenViewModel) and adding in Identity 
-                Identity.SetScopes(openIdConnectRequest.GetScopes());
-
-                // Getting scopes from user parameters (TokenViewModel)
-                // Checking in OpenIddictScopes tables for matching resources
-                // Adding in Identity
-                //var listResources = await _scopeManager.ListResourcesAsync(Identity.GetScopes()).;
-                //Identity.SetResources(.GetAsyncEnumerator().Current.ToList());
-
-
-                // Add Custom claims
-                // sub claims is mendatory
-                //Identity.AddClaim(new Claim(Claims.Subject, user.Id));
-                Identity.AddClaim(new Claim(Claims.Audience, "Resourse"));
-
-                Identity.SetDestinations(GetDestinations);
-            }
-            else if (openIdConnectRequest.IsRefreshTokenGrantType())
-            {
-                throw new NotImplementedException();
-            }
-            else
-            {
-                return BadRequest(new
-                {
-                    error = Errors.UnsupportedGrantType,
-                    error_description = "The specified grant type is not supported."
-                });
-            }
-
-            var signInResult = SignIn(new ClaimsPrincipal(Identity), properties, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-            return signInResult;
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new OpenIddictResponse()
-            {
-                Error = Errors.ServerError,
-                ErrorDescription = "Invalid login attempt"
+                Error = Errors.InvalidGrant,
+                ErrorDescription = "User does not exist with this login"
             });
         }
-    }
 
-    #region Private Methods
-
-    private static IEnumerable<string> GetDestinations(Claim claim)
-    {
-        // Note: by default, claims are NOT automatically included in the access and identity tokens.
-        // To allow OpenIddict to serialize them, you must attach them a destination, that specifies
-        // whether they should be included in access tokens, in identity tokens or in both.
-
-        return claim.Type switch
+        var result = await _signInManager.CheckPasswordSignInAsync(user, model.Password, lockoutOnFailure: false);
+        if (!result.Succeeded)
         {
-            Claims.Name or
-            Claims.Subject
-               => new[] { Destinations.AccessToken, Destinations.IdentityToken },
+            return BadRequest(new OpenIddictResponse
+            {
+                Error = Errors.InvalidGrant,
+                ErrorDescription = "Password is incorrect"
+            });
 
-            _ => new[] { Destinations.AccessToken },
+        }
+
+        try
+        {
+            var jwtToken = await CreateJwtTokenAsync(user);
+            var tokenHandler = new JwtSecurityTokenHandler();
+            SecurityToken validatedToken;
+            var principal = tokenHandler.ValidateToken(jwtToken, _jwtBearerOptions.TokenValidationParameters, out validatedToken);
+
+            var resultSignIn = SignIn(principal, JwtBearerDefaults.AuthenticationScheme);
+
+            //await HttpContext.SignInAsync(JwtBearerDefaults.AuthenticationScheme, principal);
+
+            return Ok(jwtToken);
+        }
+        catch (SecurityTokenValidationException ex)
+        {
+            return BadRequest(new { message = "Token validation failed", error = ex.Message });
+        }
+    }
+    private async Task<string> CreateJwtTokenAsync(ApplicationUser user)
+    {
+        var identity = new ClaimsIdentity(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+
+
+        identity.AddClaim(new Claim(JwtRegisteredClaimNames.Sub, user.Login));
+        identity.AddClaim(new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()));
+
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var key = Encoding.ASCII.GetBytes(_jwtBearerOptions.TokenValidationParameters.IssuerSigningKeyString);
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(identity.Claims),
+            Expires = DateTime.UtcNow.AddHours(1),
+            Audience = _jwtBearerOptions?.Audience,
+            Issuer = _jwtBearerOptions?.ClaimsIssuer,
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
+
+        var token = tokenHandler.CreateToken(tokenDescriptor);
+        var jwtToken = tokenHandler.WriteToken(token);
+        return jwtToken;
     }
 
-    #endregion
+
 }
 
