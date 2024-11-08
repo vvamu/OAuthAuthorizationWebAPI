@@ -19,7 +19,7 @@ namespace OAuthAuthorizationWebAPI.Controllers;
 
 [Route("api")]
 [ApiController]
-[Authorize]
+
 public class UserController : ControllerBase
 {
     
@@ -33,8 +33,13 @@ public class UserController : ControllerBase
 
     [HttpGet]
     [Route("users/get")]
+    //[Authorize]
     public async Task<IActionResult> Get()
     {
+        var resultAuthentification = await HttpContext.AuthenticateAsync(OpenIddictConstants.Schemes.Bearer);
+        if (!resultAuthentification.Succeeded) return BadRequest("your app is shiit");
+        string accessToken = resultAuthentification.Properties.GetTokenValue("access_token");
+
         try
         {
             var users = await _context.Users.Select(x => new LoginViewModel() { Login = x.Login, Password = x.PasswordHash }).ToListAsync();

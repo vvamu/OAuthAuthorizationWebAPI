@@ -11,8 +11,8 @@ using OAuthAuthorizationWebAPI.Persistence;
 namespace OAuthAuthorizationWebAPI.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20241105202410_openIddict")]
-    partial class openIddict
+    [Migration("20241107220239_add-refresh-token-into-user")]
+    partial class addrefreshtokenintouser
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -193,6 +193,10 @@ namespace OAuthAuthorizationWebAPI.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("RefreshToken")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("TEXT");
 
@@ -200,6 +204,7 @@ namespace OAuthAuthorizationWebAPI.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("UserName")
+                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("TEXT");
 

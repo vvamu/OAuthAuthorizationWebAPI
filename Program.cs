@@ -1,12 +1,19 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using OAuthAuthorization.Domain.Models;
+using OAuthAuthorizationWebAPI.Helpers.Middleware;
 using OAuthAuthorizationWebAPI.Persistence;
 using OpenIddict.Abstractions;
+using OpenIddict.Core;
+using OpenIddict.EntityFrameworkCore.Models;
+using OpenIddict.Server.AspNetCore;
+using OpenIddict.Validation.AspNetCore;
 using System.Text;
+using static OpenIddict.Abstractions.OpenIddictConstants.Permissions;
 
 var builder = WebApplication.CreateBuilder(args);
 var services = builder.Services;
@@ -67,25 +74,12 @@ services.AddOpenIddict()
                       .EnableAuthorizationEndpointPassthrough()
                       .EnableLogoutEndpointPassthrough();
 
-               //options.RegisterClaims(configuration.GetSection("OpenIddict:Claims").Get<string[]>()!); // Expose all the supported claims in the discovery document.
-               //options.RegisterScopes(configuration.GetSection("OpenIddict:Scopes").Get<string[]>()!); // Expose all the supported scopes in the discovery document.
 
-               // Note: an ephemeral signing key is deliberately used to make the "OP-Rotation-OP-Sig"
-               // test easier to run as restarting the application is enough to rotate the keys.
-               //options.AddEphemeralEncryptionKey()
-               //       .AddEphemeralSigningKey();
-
-               // Register the ASP.NET Core host and configure the ASP.NET Core-specific options.
-               //
-               // Note: the pass-through mode is not enabled for the token endpoint
-               // so that token requests are automatically handled by OpenIddict.
-               //options.UseAspNetCore()
-               //       .EnableAuthorizationEndpointPassthrough()
-               //       .EnableAuthorizationRequestCaching()
-               //       .EnableLogoutEndpointPassthrough();
+               options.SetAccessTokenLifetime(TimeSpan.FromMinutes(1));
+               options.SetRefreshTokenLifetime(TimeSpan.FromDays(30)); // Установка срока действия refresh-токена
+               options.AddSigningKey(new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtOptions.TokenValidationParameters.IssuerSigningKeyString)));
 
            })
-           
            .AddValidation(options =>
            {
                options.UseAspNetCore();        
@@ -93,14 +87,16 @@ services.AddOpenIddict()
 
                options.SetIssuer("https://localhost:7292/");
                options.SetConfiguration(new OpenIddictConfiguration() { });
+               
 
-           })
-           ;
+           });
+
+
 services.AddAuthentication(options =>
- {
-     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-     options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
- })
+{
+    options.DefaultScheme = OpenIddictConstants.Schemes.Bearer;
+    //options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+})
 .AddJwtBearer(options =>
 {
     options.Authority = jwtOptions.Authority;
@@ -111,13 +107,8 @@ services.AddAuthentication(options =>
     options.TokenValidationParameters = jwtOptions.TokenValidationParameters;
     options.TokenValidationParameters.ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 };
     options.TokenValidationParameters.IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtOptions.TokenValidationParameters.IssuerSigningKeyString));
-})
+});
 
-.AddCookie(options =>
-{
-    options.ExpireTimeSpan = TimeSpan.FromDays(1);
-})
-;
 
 services.AddCors(options =>
 {
@@ -128,6 +119,8 @@ services.AddCors(options =>
                .AllowAnyHeader();
     });
 });
+services.AddHttpContextAccessor();
+
 
 
 var app = builder.Build();
@@ -140,10 +133,15 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseDeveloperExceptionPage();
+
 app.UseRouting();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<AddTokenToRequestMiddleware>();
+
+
+
 app.UseEndpoints(options =>
 {
     options.MapControllers();
