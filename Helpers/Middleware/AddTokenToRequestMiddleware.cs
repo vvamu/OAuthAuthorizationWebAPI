@@ -1,8 +1,4 @@
 ﻿using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Threading.Tasks;
 namespace OAuthAuthorizationWebAPI.Helpers.Middleware;
 public class AddTokenToRequestMiddleware
 {
@@ -21,7 +17,7 @@ public class AddTokenToRequestMiddleware
 
         await AfterProcessingRequest(context, serviceProvider);
     }
-    private  async Task BeforeProcessingRequest(HttpContext context, IServiceProvider serviceProvider)
+    private async Task BeforeProcessingRequest(HttpContext context, IServiceProvider serviceProvider)
     {
         var httpContextAccessor = serviceProvider.GetRequiredService<IHttpContextAccessor>();
         var token = await httpContextAccessor.HttpContext.GetTokenAsync("access_token");

@@ -1,19 +1,13 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using OAuthAuthorization.Domain.Models;
+using OAuthAuthorizationWebAPI.Helpers;
 using OAuthAuthorizationWebAPI.Helpers.Middleware;
 using OAuthAuthorizationWebAPI.Persistence;
 using OpenIddict.Abstractions;
-using OpenIddict.Core;
-using OpenIddict.EntityFrameworkCore.Models;
-using OpenIddict.Server.AspNetCore;
-using OpenIddict.Validation.AspNetCore;
 using System.Text;
-using static OpenIddict.Abstractions.OpenIddictConstants.Permissions;
 
 var builder = WebApplication.CreateBuilder(args);
 var services = builder.Services;
@@ -35,6 +29,9 @@ var jwtOptions = configuration.GetSection("JwtBearerOptions").Get<OAuthAuthoriza
 
 #endregion
 
+services.AddTransient<IApplicationUserService, ApplicationUserService>();
+
+
 services.AddDbContext<ApplicationDbContext>(options =>
     {
         options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
@@ -46,6 +43,7 @@ services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
         .AddDefaultTokenProviders();
 
 services.AddOpenIddict()
+    
            .AddCore(options =>
            {
                options.UseEntityFrameworkCore()
@@ -53,62 +51,61 @@ services.AddOpenIddict()
            })
            .AddServer(options =>
            {
-               options.SetAuthorizationEndpointUris("/api/user/authorize")
-                      .SetTokenEndpointUris("/api/user/token")
-                      .SetLogoutEndpointUris("/api/user/logout")
-                      ;
+               options.SetTokenEndpointUris("/api/client/token")
+               ;
 
                options
                       .AllowPasswordFlow()
                       .AllowRefreshTokenFlow();
-                       //.AllowClientCredentialsFlow()
-                       //.AllowAuthorizationCodeFlow()
-                       //.AllowImplicitFlow()
-                       //.AllowHybridFlow()
 
-               options.AddDevelopmentEncryptionCertificate()
-                      .AddDevelopmentSigningCertificate();
+                   options.AddDevelopmentEncryptionCertificate()
+                          .AddDevelopmentSigningCertificate();
 
                options.UseAspNetCore()
                       .EnableTokenEndpointPassthrough()
                       .EnableAuthorizationEndpointPassthrough()
-                      .EnableLogoutEndpointPassthrough();
+                      .EnableLogoutEndpointPassthrough()
+                      ;
 
 
                options.SetAccessTokenLifetime(TimeSpan.FromMinutes(1));
-               options.SetRefreshTokenLifetime(TimeSpan.FromDays(30)); // Установка срока действия refresh-токена
-               options.AddSigningKey(new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtOptions.TokenValidationParameters.IssuerSigningKeyString)));
+               options.SetRefreshTokenLifetime(TimeSpan.FromDays(30));
+               //options.AddSigningKey(new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtOptions.TokenValidationParameters.IssuerSigningKeyString)));
+               
 
            })
            .AddValidation(options =>
            {
-               options.UseAspNetCore();        
-               options.EnableAuthorizationEntryValidation();
-
-               options.SetIssuer("https://localhost:7292/");
-               options.SetConfiguration(new OpenIddictConfiguration() { });
-               
-
-           });
+               //options.EnableAuthorizationEntryValidation();
+               //options.UseSystemNetHttp();
+               //options.SetIssuer("https://localhost:7292/");
+               options.UseLocalServer();
+               options.UseAspNetCore();
+           })
+           
+           ;
 
 
 services.AddAuthentication(options =>
 {
     options.DefaultScheme = OpenIddictConstants.Schemes.Bearer;
-    //options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    //options.DefaultAuthenticateScheme = OpenIddictConstants.Schemes.Bearer;//JwtBearerDefaults.AuthenticationScheme;
 })
-.AddJwtBearer(options =>
+//.AddJwtBearer(options =>
+//{
+//    options.Authority = jwtOptions.Authority;
+//    options.ClaimsIssuer = jwtOptions.ClaimsIssuer;
+//    options.Audience = jwtOptions.Audience;
+//    options.RequireHttpsMetadata = jwtOptions.RequireHttpsMetadata;
+
+//    options.TokenValidationParameters = jwtOptions.TokenValidationParameters;
+//    options.TokenValidationParameters.ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 };
+//    options.TokenValidationParameters.IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtOptions.TokenValidationParameters.IssuerSigningKeyString));
+//})
+.AddBearerToken(options =>
 {
-    options.Authority = jwtOptions.Authority;
-    options.ClaimsIssuer = jwtOptions.ClaimsIssuer;
-    options.Audience = jwtOptions.Audience;
-    options.RequireHttpsMetadata = jwtOptions.RequireHttpsMetadata;
-
-    options.TokenValidationParameters = jwtOptions.TokenValidationParameters;
-    options.TokenValidationParameters.ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 };
-    options.TokenValidationParameters.IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtOptions.TokenValidationParameters.IssuerSigningKeyString));
+    
 });
-
 
 services.AddCors(options =>
 {
@@ -119,28 +116,17 @@ services.AddCors(options =>
                .AllowAnyHeader();
     });
 });
-services.AddHttpContextAccessor();
+//services.AddHttpContextAccessor();
 
 
 
 var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-app.UseHttpsRedirection();
-
-app.UseDeveloperExceptionPage();
 
 app.UseRouting();
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 app.UseMiddleware<AddTokenToRequestMiddleware>();
-
-
 
 app.UseEndpoints(options =>
 {

@@ -4,9 +4,13 @@ namespace OAuthAuthorizationWebAPI.Helpers.ViewModel;
 
 public class LoginViewModel
 {
-    [Required]
     public string Login { get; set; }
-    [Required]
+
     public string Password { get; set; }
 
+    public void CheckValid()
+    {
+        if (string.IsNullOrEmpty(Login)) throw new Exception("Login is not valid");
+        if (string.IsNullOrEmpty(Password)) throw new Exception("Password is not valid");
+    }
 }
