@@ -1,18 +1,12 @@
 ﻿using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using OAuthAuthorizationWebAPI.Helpers;
 using OpenIddict.Abstractions;
-using OpenIddict.Core;
 using OpenIddict.Server.AspNetCore;
-using OpenIddict.Validation.AspNetCore;
-using System.Net.Http.Headers;
 using System.Security.Claims;
-using System.Security.Principal;
 using System.Text.Json;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 
@@ -26,7 +20,7 @@ public class ClientAuthorizationController : ControllerBase
     private readonly IOpenIddictApplicationManager _openIddictApplicationManager;
     private readonly IOpenIddictTokenManager _openIddictTokenManager;
     private readonly IOpenIddictScopeManager _scopeManager;
-    public ClientAuthorizationController(IApplicationUserService userService, IOpenIddictApplicationManager openIddictApplicationManager, 
+    public ClientAuthorizationController(IApplicationUserService userService, IOpenIddictApplicationManager openIddictApplicationManager,
         IOpenIddictTokenManager openIddictTokenManager, IOpenIddictScopeManager scopeManager)
     {
         _userService = userService;
@@ -75,10 +69,10 @@ public class ClientAuthorizationController : ControllerBase
 
                             }
                 });
-                
+
             }
         }
-        catch (Exception ex) 
+        catch (Exception ex)
         {
             return BadRequest("Client app wasn't register. Exception: " + ex.Message.ToString());
         }
@@ -94,12 +88,12 @@ public class ClientAuthorizationController : ControllerBase
         try
         {
             var openIdConnectRequest = HttpContext.GetOpenIddictServerRequest() ?? throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
-            
-            if (!openIdConnectRequest.IsPasswordGrantType() && !openIdConnectRequest.IsRefreshTokenGrantType()) 
+
+            if (!openIdConnectRequest.IsPasswordGrantType() && !openIdConnectRequest.IsRefreshTokenGrantType())
                 throw new NotImplementedException("The specified grant type is not implemented.");
-            if(openIdConnectRequest.IsRefreshTokenGrantType())
+            if (openIdConnectRequest.IsRefreshTokenGrantType())
             {
-                var identityRefresh = await RefreshTokenAsync(); 
+                var identityRefresh = await RefreshTokenAsync();
                 return SignIn(new ClaimsPrincipal(identityRefresh), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
 
             }
@@ -115,17 +109,17 @@ public class ClientAuthorizationController : ControllerBase
             identity.SetClaim(Claims.Subject, await _openIddictApplicationManager.GetClientIdAsync(client));
             identity.SetClaim(Claims.Name, await _openIddictApplicationManager.GetDisplayNameAsync(client));
 
-            var userDb = await _userService.AuthenticateAsync(new Helpers.ViewModel.LoginViewModel() {  Login =openIdConnectRequest.Username , Password = openIdConnectRequest.Password});
+            var userDb = await _userService.AuthenticateAsync(new Helpers.ViewModel.LoginViewModel() { Login = openIdConnectRequest.Username, Password = openIdConnectRequest.Password });
             identity.SetClaim(Claims.Audience, userDb.Id.ToString());
-            identity.SetClaim("Login", userDb.Login); 
+            identity.SetClaim("Login", userDb.Login);
             identity.SetClaim("PasswordHash", userDb.PasswordHash);
-            identity.SetDestinations((claim) => [Destinations.AccessToken,Destinations.IdentityToken]);
+            identity.SetDestinations((claim) => [Destinations.AccessToken, Destinations.IdentityToken]);
             identity.SetScopes(openIdConnectRequest.GetScopes());
 
             var principal = new ClaimsPrincipal(identity);
-            
+
             return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-            
+
 
         }
         catch (Exception ex)
@@ -134,9 +128,9 @@ public class ClientAuthorizationController : ControllerBase
         }
     }
 
-    
 
-    
+
+
     [HttpPost]
     [Route("client/refresh-token")]
     [AllowAnonymous]

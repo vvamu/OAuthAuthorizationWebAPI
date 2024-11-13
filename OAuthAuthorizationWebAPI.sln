@@ -7,7 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OAuthAuthorizationWebAPI", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Client", "..\Client\Client.csproj", "{29979F45-0B0E-4673-AC6A-8C240B5B7E0A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OAuthAuthorization.Testing", "..\OAuthAuthorization.Testing\OAuthAuthorization.Testing.csproj", "{FC2A91E9-C19D-4F5B-9BE7-F510C3F4F94A}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OAuthAuthorization.Testing", "..\OAuthAuthorization.Testing\OAuthAuthorization.Testing.csproj", "{CED19AEC-76E6-4044-8EFA-0023C6192BDF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -23,10 +23,10 @@ Global
 		{29979F45-0B0E-4673-AC6A-8C240B5B7E0A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{29979F45-0B0E-4673-AC6A-8C240B5B7E0A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{29979F45-0B0E-4673-AC6A-8C240B5B7E0A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FC2A91E9-C19D-4F5B-9BE7-F510C3F4F94A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FC2A91E9-C19D-4F5B-9BE7-F510C3F4F94A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FC2A91E9-C19D-4F5B-9BE7-F510C3F4F94A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FC2A91E9-C19D-4F5B-9BE7-F510C3F4F94A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CED19AEC-76E6-4044-8EFA-0023C6192BDF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CED19AEC-76E6-4044-8EFA-0023C6192BDF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CED19AEC-76E6-4044-8EFA-0023C6192BDF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CED19AEC-76E6-4044-8EFA-0023C6192BDF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

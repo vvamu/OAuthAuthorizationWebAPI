@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OAuthAuthorization.Domain.Models;
 using OAuthAuthorizationWebAPI.Helpers.ViewModel;
@@ -30,7 +29,7 @@ public class ApplicationUserService : IApplicationUserService
         {
             throw new Exception("Password is incorrect");
         }
-        return new ApplicationUser() { Id = user.Id, Login = model.Login, PasswordHash = user.PasswordHash};
+        return new ApplicationUser() { Id = user.Id, Login = model.Login, PasswordHash = user.PasswordHash };
     }
     public async Task<LoginViewModel> CreateAsync(LoginViewModel model)
     {
@@ -63,7 +62,7 @@ public class ApplicationUserService : IApplicationUserService
 
     public async Task<ApplicationUser> GetAsync(Guid id)
     {
-        var user = await _context.Users.FirstOrDefaultAsync(x=>x.Id == id);
+        var user = await _context.Users.FirstOrDefaultAsync(x => x.Id == id);
         return user ?? throw new Exception("User not found");
     }
 

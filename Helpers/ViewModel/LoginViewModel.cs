@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-
-namespace OAuthAuthorizationWebAPI.Helpers.ViewModel;
+﻿namespace OAuthAuthorizationWebAPI.Helpers.ViewModel;
 
 public class LoginViewModel
 {
