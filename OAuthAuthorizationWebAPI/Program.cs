@@ -1,7 +1,8 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using OAuthAuthorization.Domain.Models;
-using OAuthAuthorizationWebAPI.Helpers;
+using OAuthAuthorizationWebAPI.Application;
+using OAuthAuthorizationWebAPI.Helpers.Middleware;
 using OAuthAuthorizationWebAPI.Persistence;
 using OpenIddict.Abstractions;
 
@@ -10,7 +11,6 @@ var services = builder.Services;
 
 services.AddControllers();
 services.AddEndpointsApiExplorer();
-services.AddSwaggerGen();
 
 services.AddTransient<IApplicationUserService, ApplicationUserService>();
 
@@ -36,7 +36,8 @@ services.AddOpenIddict()
                options.SetTokenEndpointUris("/api/client/token");
 
                options.AllowPasswordFlow()
-                      .AllowRefreshTokenFlow();
+                      .AllowRefreshTokenFlow()
+                      ;
 
                options.AddDevelopmentEncryptionCertificate()
                           .AddDevelopmentSigningCertificate();
@@ -87,5 +88,6 @@ app.UseEndpoints(options =>
 });
 
 app.MapControllers();
+app.UseMiddleware<AddTokenToRequestMiddleware>();
 
 app.Run();

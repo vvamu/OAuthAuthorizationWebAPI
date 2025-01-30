@@ -1,7 +1,7 @@
 ﻿using OAuthAuthorization.Domain.Models;
 using OAuthAuthorizationWebAPI.Helpers.ViewModel;
 
-namespace OAuthAuthorizationWebAPI.Helpers;
+namespace OAuthAuthorizationWebAPI.Application;
 
 public interface IApplicationUserService
 {

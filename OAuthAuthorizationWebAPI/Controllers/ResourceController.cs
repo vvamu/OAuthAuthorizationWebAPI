@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using OAuthAuthorizationWebAPI.Helpers;
+using OAuthAuthorizationWebAPI.Application;
 using OAuthAuthorizationWebAPI.Helpers.ViewModel;
 using OpenIddict.Abstractions;
 using OpenIddict.Validation.AspNetCore;

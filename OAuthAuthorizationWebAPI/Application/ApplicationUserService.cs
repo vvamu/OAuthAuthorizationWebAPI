@@ -4,7 +4,7 @@ using OAuthAuthorization.Domain.Models;
 using OAuthAuthorizationWebAPI.Helpers.ViewModel;
 using OAuthAuthorizationWebAPI.Persistence;
 
-namespace OAuthAuthorizationWebAPI.Helpers;
+namespace OAuthAuthorizationWebAPI.Application;
 public class ApplicationUserService : IApplicationUserService
 {
     private readonly ApplicationDbContext _context;

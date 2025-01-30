@@ -1,0 +1,25 @@
+﻿<Window x:Class="Client.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Client.Views"
+        mc:Ignorable="d"
+        
+        xmlns:prism="http://prismlibrary.com/" 
+        xmlns:viewmodel="clr-namespace:Client.ViewModels" 
+        
+        Title="{Binding WindowTitle, Mode=TwoWay}" Height="450" Width="800"
+        prism:ViewModelLocator.AutoWireViewModel="True"
+        Loaded="Window_Loaded"
+        
+        >
+
+    <Grid>
+        <TextBlock Text="{Binding LoginUser.Login, Mode=TwoWay}" HorizontalAlignment="Right" Margin="30" />
+
+        <Frame prism:RegionManager.RegionName="ContentRegionMainWindow" NavigationUIVisibility="Visible">
+
+            </Frame>
+        </Grid>
+</Window>

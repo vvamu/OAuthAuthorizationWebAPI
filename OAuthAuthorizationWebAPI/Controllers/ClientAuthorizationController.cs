@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
-using OAuthAuthorizationWebAPI.Helpers;
+using OAuthAuthorizationWebAPI.Application;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
 using System.Security.Claims;
@@ -67,6 +67,8 @@ public class ClientAuthorizationController : ControllerBase
                             Permissions.GrantTypes.Password,
                             Permissions.GrantTypes.RefreshToken,
 
+                            Permissions.Prefixes.Scope + Scopes.OfflineAccess,
+                            Permissions.Prefixes.Scope + Scopes.OpenId,
                             }
                 });
 
